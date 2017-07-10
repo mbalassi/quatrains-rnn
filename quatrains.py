@@ -98,19 +98,24 @@ else:
 # Configure a TensorFlow model via Keras
 model = Sequential()
 # Use potentially different devices to compute one part of the model vs another
-with tf.device(device):
-    # Embedding layer converts words (indices) into embeddings
-    # The actual embedding matrix is set below
-    model.add(Embedding(num_distinct_words + 1, embedding_dim, input_length=phrase_len))
-    # Learn a recurrent model of sequences of words with a Gated Recurrent Unit (GRU)
-    model.add(GRU(gru_dim,
-                  dropout=dropout,
-                  recurrent_dropout=dropout,
-                  kernel_regularizer=l2(regularization),
-                  bias_regularizer=l2(regularization),
-                  recurrent_regularizer=l2(regularization)))
-    # Predict one of the possible words (or end) with standard dense layer plus softmax activation
-    model.add(Dense(num_distinct_words + 1, activation='softmax'))
+
+tf_dev = tf.device(device)
+# Temporary Workaround for DSE-2208
+tf_dev.__enter__()
+# Embedding layer converts words (indices) into embeddings
+# The actual embedding matrix is set below
+model.add(Embedding(num_distinct_words + 1, embedding_dim, input_length=phrase_len))
+# Learn a recurrent model of sequences of words with a Gated Recurrent Unit (GRU)
+model.add(GRU(gru_dim,
+              dropout=dropout,
+              recurrent_dropout=dropout,
+              kernel_regularizer=l2(regularization),
+              bias_regularizer=l2(regularization),
+              recurrent_regularizer=l2(regularization)))
+# Predict one of the possible words (or end) with standard dense layer plus softmax
+model.add(Dense(num_distinct_words + 1, activation='softmax'))
+# Temporary Workaround for DSE-2208
+tf_dev.__exit__(None, None, None)
 
 # Actually set the weights for the embedding
 # Note that this is not 'frozen' and is left trainable
